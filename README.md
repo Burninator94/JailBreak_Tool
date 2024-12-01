@@ -4,7 +4,7 @@ JailBreak is a data forensics tool designed to automate extracting and analyzing
 Features:
 Automated Dependency Installation - Single command to install full dependency list
 Systematic processing: Stegseek -> HashID -> John the Ripper -> pkcrack
-Escalating wordlists in rockyou.txt brockyou.txt, betterrockyou.txt, and brockyou++.txt
+Escalating wordlists in rockyou.txt brockyou.txt, betterrockyou.txt, and 
 Autogenerating hashlists
 Multiprocessing
 User Input Functionality
@@ -19,6 +19,7 @@ Directory Architecture:
 /
   jailbreak/
     Jailhouse/
+      Courtyard/ (stores extracted data from zip archives for processing)
       steg_result/ (Stores the results of the stegseek tool)
       hashfile/ (Contains hash files processed by the script.)
     wordlist/
