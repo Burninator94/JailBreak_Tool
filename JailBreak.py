@@ -2,6 +2,7 @@ import os
 import subprocess
 import argparse
 import shutil
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 import requests
 
@@ -63,44 +64,96 @@ def run_john(hashfile, wordlist_path, john_output_file):
     except subprocess.CalledProcessError:
         return False
 
-def run_pkcrack(encrypted_zip, plaintext_zip, decrypted_file):
+def create_plaintext_archive(plaintext_file, plaintext_zip):
     try:
-        subprocess.run(["pkcrack", "-C", encrypted_zip, "-c", "ciphertextname", "-P", plaintext_zip, "-p", "plaintextname", "-d", decrypted_file], check=True)
+        shutil.make_archive(plaintext_zip, 'zip', os.path.dirname(plaintext_file), os.path.basename(plaintext_file))
+        return True
+    except OSError as e:
+        print(f"Failed to create plaintext archive: {e}")
+        return False
+
+def run_pkcrack(encrypted_zip, encrypted_file, plaintext_zip, plaintext_file, decrypted_file):
+    try:
+        subprocess.run(["pkcrack", "-C", encrypted_zip, "-c", encrypted_file, "-P", plaintext_zip, "-p", plaintext_file, "-d", decrypted_file], check=True)
         return True
     except subprocess.CalledProcessError:
         return False
+
+def extract_files_from_zip(zip_path, extract_dir):
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_dir)
 
 def process_file(args):
     filename, known_hash, known_encrypt = args['filename'], args['hash'], args['encrypt']
     try:
         filepath = os.path.join("Jailbreak/Jailhouse", filename)
         if os.path.isfile(filepath):
-            steg_result_file = f"Jailbreak/Jailhouse/steg_result/{filename}_steg_result.txt"
-            hashfile = f"Jailbreak/Jailhouse/hashfile/{filename}_hashfile.txt"
-            john_output_file = f"Jailbreak/Freedom/{filename}_cracked.txt"
-            decrypted_file = f"Jailbreak/Freedom/{filename}_decrypted.zip"
+            if zipfile.is_zipfile(filepath):
+                extract_dir = f"Jailbreak/Jailhouse/Courtyard/{filename}"
+                os.makedirs(extract_dir, exist_ok=True)
+                extract_files_from_zip(filepath, extract_dir)
 
-            wordlists = ["Jailbreak/wordlist/rockyou.txt", "Jailbreak/wordlist/betterrockyou.txt"]
+                for root, dirs, files in os.walk(extract_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        steg_result_file = f"{file_path}_steg_result.txt"
+                        hashfile = f"{file_path}_hashfile.txt"
+                        john_output_file = f"Jailbreak/Freedom/{file}_cracked.txt"
+                        decrypted_file = f"Jailbreak/Freedom/{file}_decrypted.zip"
 
-            stegseek_success = False
-            for wordlist in wordlists:
-                if run_stegseek(filepath, wordlist, steg_result_file):
-                    stegseek_success = True
-                    break
+                        wordlists = ["Jailbreak/wordlist/rockyou.txt", "Jailbreak/wordlist/betterrockyou.txt"]
 
-            if stegseek_success or known_hash:
-                if not known_hash:
-                    with open(hashfile, "w") as f:
-                        subprocess.run(["hash-identifier", filepath], stdout=f, check=True)
+                        stegseek_success = False
+                        for wordlist in wordlists:
+                            if run_stegseek(file_path, wordlist, steg_result_file):
+                                stegseek_success = True
+                                break
 
-                if known_encrypt:
-                    for wordlist in wordlists:
-                        if run_john(hashfile, wordlist, john_output_file):
-                            break
+                        if stegseek_success or known_hash:
+                            if not known_hash:
+                                with open(hashfile, "w") as f:
+                                    subprocess.run(["hash-identifier", file_path], stdout=f, check=True)
 
-            if filename.endswith(".zip") and not known_encrypt:
-                plaintext_zip = "path/to/plaintext.zip"  # Update with the actual path to the plaintext ZIP
-                run_pkcrack(filepath, plaintext_zip, decrypted_file)
+                            if known_encrypt:
+                                for wordlist in wordlists:
+                                    if run_john(hashfile, wordlist, john_output_file):
+                                        break
+
+                        if file.endswith(".zip") and not known_encrypt:
+                            plaintext_zip = "Jailbreak/known_plaintext/plaintext.zip"  # Update with the actual path to the known plaintext ZIP
+                            plaintext_file = "plaintextfile.txt"  # Update with the actual plaintext file name
+                            if create_plaintext_archive(plaintext_file, plaintext_zip):
+                                run_pkcrack(file_path, plaintext_file, plaintext_zip, plaintext_file, decrypted_file)
+            else:
+                # Process the file as before
+                steg_result_file = f"Jailbreak/Jailhouse/steg_result/{filename}_steg_result.txt"
+                hashfile = f"Jailbreak/Jailhouse/hashfile/{filename}_hashfile.txt"
+                john_output_file = f"Jailbreak/Freedom/{filename}_cracked.txt"
+                decrypted_file = f"Jailbreak/Freedom/{filename}_decrypted.zip"
+
+                wordlists = ["Jailbreak/wordlist/rockyou.txt", "Jailbreak/wordlist/betterrockyou.txt"]
+
+                stegseek_success = False
+                for wordlist in wordlists:
+                    if run_stegseek(filepath, wordlist, steg_result_file):
+                        stegseek_success = True
+                        break
+
+                if stegseek_success or known_hash:
+                    if not known_hash:
+                        with open(hashfile, "w") as f:
+                            subprocess.run(["hash-identifier", filepath], stdout=f, check=True)
+
+                    if known_encrypt:
+                        for wordlist in wordlists:
+                            if run_john(hashfile, wordlist, john_output_file):
+                                break
+
+                if filename.endswith(".zip") and not known_encrypt:
+                    plaintext_zip = "Jailbreak/known_plaintext/plaintext.zip"  # Update with the actual path to the known plaintext ZIP
+                    plaintext_file = "plaintextfile.txt"  # Update with the actual plaintext file name
+                    if create_plaintext_archive(plaintext_file, plaintext_zip):
+                        run_pkcrack(filepath, plaintext_file, plaintext_zip, plaintext_file, decrypted_file)
     except FileNotFoundError as e:
         print(f"File not found: {e}")
     except PermissionError as e:
