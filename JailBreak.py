@@ -28,9 +28,8 @@ def install_dependencies():
 
         # Define the wordlist URLs and filenames
         wordlists = {
-            "rockyou.txt": "https://example.com/path/to/rockyou.txt",
-            "betterrockyou.txt": "https://example.com/path/to/betterrockyou.txt",
-            "brockyou++.txt": "https://example.com/path/to/brockyou++.txt"
+            "rockyou.txt": "https://github.com/ohmybahgosh/RockYou2021.txt",
+            "betterrockyou.txt": "https://github.com/Leminee/BetterRockyou",
         }
 
         for filename, url in wordlists.items():
@@ -81,7 +80,7 @@ def process_file(args):
             john_output_file = f"Jailbreak/Freedom/{filename}_cracked.txt"
             decrypted_file = f"Jailbreak/Freedom/{filename}_decrypted.zip"
 
-            wordlists = ["Jailbreak/wordlist/rockyou.txt", "Jailbreak/wordlist/betterrockyou.txt", "Jailbreak/wordlist/brockyou++.txt"]
+            wordlists = ["Jailbreak/wordlist/rockyou.txt", "Jailbreak/wordlist/betterrockyou.txt"]
 
             stegseek_success = False
             for wordlist in wordlists:
