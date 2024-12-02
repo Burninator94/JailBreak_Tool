@@ -13,7 +13,7 @@ Installation:
 1. Ensure Python is installed on the system
 2. Clone the repo
 3. ~cd jailbreak
-4. ~python jailbreak.py --install
+4. ~sudo python jailbreak.py --install
 
 Directory Architecture:
 /
@@ -33,7 +33,7 @@ Scheme of Operation:
   2. Install Jailbreak
   3. Load the Jailhouse directory with all targeted files
   4. Run the program
-     python jailbreak.py --execute
+     ~sudo python jailbreak.py --execute
   5. Input any known values for target files
   6. Wait for the completion message
   7. Open the Freedom directory
