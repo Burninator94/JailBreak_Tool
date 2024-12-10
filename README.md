@@ -11,9 +11,10 @@ User Input Functionality
 
 Installation:
 1. Ensure Python is installed on the system
-2. Clone the repo
-3. ~cd jailbreak
-4. ~sudo python jailbreak.py --install
+2. Install requests module (~pip3 install requests)
+3. Clone the repo
+4. ~cd jailbreak
+5. ~sudo python jailbreak.py --install
 
 Directory Architecture:
 /
