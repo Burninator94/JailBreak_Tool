@@ -196,3 +196,54 @@ def process_file(args):
                 if filename.endswith(".zip") and not known_encrypt:
                     plaintext_zip = "Jailbreak/known_plaintext/plaintext.zip"  # Update with the actual path to the known plaintext ZIP
                     plaintext_file = "plaintextfile.txt"  # Update with the actual
+                    if create_plaintext_archive(plaintext_file, plaintext_zip):
+                        run_pkcrack(filepath, plaintext_file, plaintext_zip, plaintext_file, decrypted_file)
+    except FileNotFoundError as e:
+        print(f"File not found: {e}")
+    except PermissionError as e:
+        print(f"Permission denied: {e}")
+    except OSError as e:
+        print(f"OS error: {e}")
+
+def jailbreak():
+    try:
+        # Clear the Freedom directory
+        freedom_path = "Jailbreak/Freedom"
+        if os.path.exists(freedom_path):
+            shutil.rmtree(freedom_path)
+        os.makedirs(freedom_path, exist_ok=True)
+        
+        filenames = os.listdir("Jailbreak/Jailhouse")
+        
+        known_info = {}
+        for filename in filenames:
+            print(f"What do we know about {filename}? (leave blank if unknown)")
+            known_hash = input("Hash: ")
+            known_encrypt = input("Encryption: ")
+            known_info[filename] = {'filename': filename, 'hash': known_hash if known_hash else None, 'encrypt': known_encrypt if known_encrypt else None}
+
+        with ThreadPoolExecutor() as executor:
+            executor.map(lambda filename: process_file(known_info[filename]), filenames)
+        
+        print("Jailbreak process completed successfully.")
+    except FileNotFoundError as e:
+        print(f"Directory not found: {e}")
+    except PermissionError as e:
+        print(f"Permission denied: {e}")
+    except OSError as e:
+        print(f"OS error: {e}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Jailbreak program")
+    parser.add_argument("--install", action="store_true", help="Install dependencies")
+    parser.add_argument("--execute", action="store_true", help="Execute jailbreak process")
+
+    args = parser.parse_args()
+
+    if args.install:
+        install_dependencies()
+    elif args.execute:
+        jailbreak()
+
+if __name__ == "__main__":
+    main()
