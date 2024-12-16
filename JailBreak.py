@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 import logging
 
-# Configure logging
+# Configure logging process
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def download_file(url, destination):
@@ -30,7 +30,7 @@ def install_dependencies():
         subprocess.run(["pip3", "install", "requests"], check=True)
         logging.info("Installed requests library")
         
-        # Install other necessary dependencies
+        # Install john and hash-id
         subprocess.run(["sudo", "apt-get", "install", "-y", "john", "hash-identifier"], check=True)
         logging.info("Installed john and hash-identifier")
         
@@ -70,6 +70,7 @@ def install_dependencies():
         for filename, url in wordlists.items():
             logging.info(f"Downloading {filename} from {url}")
             download_file(url, filename)
+            
             # Move the downloaded wordlist to the wordlist directory
             wordlist_source = filename
             wordlist_destination = f"Jailbreak/wordlist/{filename}"
