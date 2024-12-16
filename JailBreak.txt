@@ -5,27 +5,61 @@ import shutil
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 import requests
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def download_file(url, destination):
-    response = requests.get(url, stream=True)
-    with open(destination, 'wb') as file:
-        for chunk in response.iter_content(chunk_size=8192):
-            file.write(chunk)
+    try:
+        response = requests.get(url, stream=True)
+        with open(destination, 'wb') as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                file.write(chunk)
+        logging.info(f"Downloaded {url} to {destination}")
+    except requests.RequestException as e:
+        logging.error(f"Failed to download {url}: {e}")
 
 def install_dependencies():
     try:
         # Install pip if not already installed
         subprocess.run(["sudo", "apt-get", "install", "-y", "python3-pip"], check=True)
+        logging.info("Installed python3-pip")
+        
         # Install requests library
-        subprocess.run(["pip", "install", "requests"], check=True)
+        subprocess.run(["pip3", "install", "requests"], check=True)
+        logging.info("Installed requests library")
+        
         # Install other necessary dependencies
-        subprocess.run(["sudo", "apt-get", "install", "-y", "john", "hash-identifier", "stegseek", "pkcrack"], check=True)
-
+        subprocess.run(["sudo", "apt-get", "install", "-y", "john", "hash-identifier"], check=True)
+        logging.info("Installed john and hash-identifier")
+        
+        # Install stegseek
+        stegseek_repo = "https://github.com/RickdeJager/stegseek"
+        subprocess.run(["sudo", "git", "clone", stegseek_repo], check=True)
+        os.chdir("stegseek")
+        subprocess.run(["sudo", "make"], check=True)
+        subprocess.run(["sudo", "make", "install"], check=True)
+        os.chdir("..")
+        shutil.rmtree("stegseek")
+        logging.info("Installed stegseek")
+        
+        # Install pkcrack
+        pkcrack_repo = "https://github.com/keyunluo/pkcrack"
+        subprocess.run(["sudo", "git", "clone", pkcrack_repo], check=True)
+        os.chdir("pkcrack")
+        subprocess.run(["sudo", "make"], check=True)
+        subprocess.run(["sudo", "make", "install"], check=True)
+        os.chdir("..")
+        shutil.rmtree("pkcrack")
+        logging.info("Installed pkcrack")
+        
         # Create necessary directories
         os.makedirs("Jailbreak/Jailhouse/steg_result", exist_ok=True)
         os.makedirs("Jailbreak/Jailhouse/hashfile", exist_ok=True)
         os.makedirs("Jailbreak/wordlist", exist_ok=True)
         os.makedirs("Jailbreak/Freedom", exist_ok=True)
+        logging.info("Created necessary directories")
 
         # Define the wordlist URLs and filenames
         wordlists = {
@@ -34,54 +68,63 @@ def install_dependencies():
         }
 
         for filename, url in wordlists.items():
-            # Download each wordlist file
-            print(f"Downloading {filename}...")
+            logging.info(f"Downloading {filename} from {url}")
             download_file(url, filename)
             # Move the downloaded wordlist to the wordlist directory
             wordlist_source = filename
             wordlist_destination = f"Jailbreak/wordlist/{filename}"
             shutil.move(wordlist_source, wordlist_destination)
+            logging.info(f"Moved {filename} to {wordlist_destination}")
         
-        print("Dependencies installed, directories created, and wordlists downloaded and moved successfully.")
+        logging.info("Dependencies installed, directories created, and wordlists downloaded and moved successfully.")
     except subprocess.CalledProcessError as e:
-        print(f"Failed to install dependencies: {e}")
+        logging.error(f"Failed to install dependencies: {e}")
     except OSError as e:
-        print(f"Failed to create directories or move the wordlists: {e}")
-    except requests.RequestException as e:
-        print(f"Failed to download wordlists: {e}")
+        logging.error(f"Failed to create directories or move the wordlists: {e}")
 
 def run_stegseek(filepath, wordlist_path, steg_result_file):
     try:
         subprocess.run(["stegseek", filepath, wordlist_path, "-o", steg_result_file], check=True)
+        logging.info(f"Ran stegseek on {filepath} with wordlist {wordlist_path}")
         return True
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to run stegseek on {filepath}: {e}")
         return False
 
 def run_john(hashfile, wordlist_path, john_output_file):
     try:
         subprocess.run(["john", "--wordlist=" + wordlist_path, hashfile, "--pot=" + john_output_file], check=True)
+        logging.info(f"Ran john on {hashfile} with wordlist {wordlist_path}")
         return True
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to run john on {hashfile}: {e}")
         return False
 
 def create_plaintext_archive(plaintext_file, plaintext_zip):
     try:
         shutil.make_archive(plaintext_zip, 'zip', os.path.dirname(plaintext_file), os.path.basename(plaintext_file))
+        logging.info(f"Created plaintext archive {plaintext_zip}.zip from {plaintext_file}")
         return True
     except OSError as e:
-        print(f"Failed to create plaintext archive: {e}")
+        logging.error(f"Failed to create plaintext archive: {e}")
         return False
 
 def run_pkcrack(encrypted_zip, encrypted_file, plaintext_zip, plaintext_file, decrypted_file):
     try:
         subprocess.run(["pkcrack", "-C", encrypted_zip, "-c", encrypted_file, "-P", plaintext_zip, "-p", plaintext_file, "-d", decrypted_file], check=True)
+        logging.info(f"Ran pkcrack on {encrypted_zip} with plaintext {plaintext_file}")
         return True
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to run pkcrack on {encrypted_zip}: {e}")
         return False
 
 def extract_files_from_zip(zip_path, extract_dir):
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_dir)
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+        logging.info(f"Extracted files from {zip_path} to {extract_dir}")
+    except zipfile.BadZipFile as e:
+        logging.error(f"Failed to extract files from {zip_path}: {e}")
 
 def process_file(args):
     filename, known_hash, known_encrypt = args['filename'], args['hash'], args['encrypt']
@@ -113,6 +156,7 @@ def process_file(args):
                             if not known_hash:
                                 with open(hashfile, "w") as f:
                                     subprocess.run(["hash-identifier", file_path], stdout=f, check=True)
+                                    logging.info(f"Identified hash for {file_path}")
 
                             if known_encrypt:
                                 for wordlist in wordlists:
@@ -151,7 +195,7 @@ def process_file(args):
 
                 if filename.endswith(".zip") and not known_encrypt:
                     plaintext_zip = "Jailbreak/known_plaintext/plaintext.zip"  # Update with the actual path to the known plaintext ZIP
-                    plaintext_file = "plaintextfile.txt"  # Update with the actual plaintext file name
+                    plaintext_file = "plaintextfile.txt"  # Update with the actual
                     if create_plaintext_archive(plaintext_file, plaintext_zip):
                         run_pkcrack(filepath, plaintext_file, plaintext_zip, plaintext_file, decrypted_file)
     except FileNotFoundError as e:
